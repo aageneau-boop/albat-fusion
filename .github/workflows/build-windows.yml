@@ -27,7 +27,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install "pyinstaller==5.13.2"
+          pip install pyinstaller
 
       - name: Vérifier la présence des dossiers requis
         # PyInstaller échoue si un dossier listé dans "datas" (voir
