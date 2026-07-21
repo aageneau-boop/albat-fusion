@@ -1,0 +1,7 @@
+PySide6
+pandas
+openpyxl
+matplotlib
+python-docx
+Pillow
+astral
