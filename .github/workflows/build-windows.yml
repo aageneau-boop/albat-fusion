@@ -107,7 +107,7 @@ jobs:
       - name: Compiler avec PyInstaller
         run: pyinstaller "Albat Fusion.spec"
 
-    - name: Compresser le résultat en un seul .zip
+      - name: Compresser le résultat en un seul .zip
         # Python (module zipfile) plutôt que Compress-Archive
         # (PowerShell) : ce dernier est connu pour mal gérer les
         # caractères accentués dans les noms de fichiers/dossiers
