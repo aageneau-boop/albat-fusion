@@ -30,19 +30,6 @@ jobs:
           pip install pyinstaller
 
       - name: Vérifier la présence des dossiers requis
-        # PyInstaller échoue si un dossier listé dans "datas" (voir
-        # le .spec) n'existe pas. On les crée s'ils manquent, pour
-        # que le build ne casse jamais pour cette seule raison.
-        #
-        # "shell: python" fait exécuter ce bloc directement par
-        # l'interpréteur Python (GitHub Actions le prend en charge
-        # nativement), plutôt que de l'imbriquer dans une chaîne
-        # PowerShell : évite tout risque de mauvaise interprétation
-        # des caractères accentués selon l'encodage de la console
-        # Windows (souvent pas UTF-8 par défaut), qui pouvait créer
-        # des dossiers en double au nom légèrement corrompu
-        # ("matériel utilisé" vs une variante mal encodée),
-        # invisibles pour le code Python qui cherche le nom exact.
         shell: python
         run: |
           import os
@@ -56,35 +43,71 @@ jobs:
           ]:
               os.makedirs(d, exist_ok=True)
 
-      - name: Diagnostic — lister les fichiers réellement présents
-        # Étape purement informative (n'échoue jamais le build) :
-        # affiche dans les logs l'arborescence exacte d'assets/ et
-        # "dossiers pour rapport/" telle que GitHub l'a reçue, pour
-        # repérer immédiatement un dossier manquant, vide, ou un nom
-        # de fichier corrompu (accents mal encodés, etc.).
+      - name: Diagnostic — les dossiers attendus sont-ils trouvés ?
+        # Teste directement si chaque dossier que le code cherche
+        # réellement est trouvé — sans jamais afficher de caractère
+        # accentué en clair (pour éviter les faux problèmes liés à
+        # l'encodage de la console Windows), mais avec repr() à la
+        # fin pour lever toute ambiguïté sur les noms réels.
         shell: python
         run: |
           import os
-          for base in ["assets", "dossiers pour rapport", "profils"]:
-              print(f"--- {base} ---")
-              if not os.path.isdir(base):
-                  print("  (DOSSIER ABSENT)")
-                  continue
-              for root, dirs, files in os.walk(base):
-                  niveau = root.replace(base, "").count(os.sep)
-                  indent = "  " * niveau
-                  print(f"{indent}{os.path.basename(root) or base}/")
-                  for f in files:
-                      print(f"{indent}  {f}")
+
+          racine = os.getcwd()
+
+          def chemin(*parts):
+              return os.path.join(racine, *parts)
+
+          a_verifier = {
+              "assets": chemin("assets"),
+              "profils": chemin("profils"),
+              "dossiers pour rapport / bibliographie": chemin(
+                  "dossiers pour rapport", "bibliographie"
+              ),
+              "dossiers pour rapport / materiel utilise (avec accent e)": chemin(
+                  "dossiers pour rapport", "materiel utilis\u00e9"
+              ),
+              "dossiers pour rapport / Statuts des especes (avec accent e)": chemin(
+                  "dossiers pour rapport", "Statuts des esp\u00e8ces"
+              ),
+              "dossiers pour rapport / Analyse des enregistrements": chemin(
+                  "dossiers pour rapport", "Analyse des enregistrements"
+              ),
+              "dossiers pour rapport / images": chemin(
+                  "dossiers pour rapport", "images"
+              ),
+          }
+
+          print("Dossier de travail actuel :", racine)
+          print()
+
+          for nom, chem in a_verifier.items():
+              statut = "OK" if os.path.isdir(chem) else "INTROUVABLE"
+              nb = len(os.listdir(chem)) if os.path.isdir(chem) else 0
+              print(f"[{statut}] {nom}  ({nb} element(s))")
+
+          print()
+          print("--- Contenu reel de dossiers pour rapport/ (repr, sans ambiguite) ---")
+          base = chemin("dossiers pour rapport")
+          if os.path.isdir(base):
+              for nom in sorted(os.listdir(base)):
+                  print(" ", repr(nom))
+          else:
+              print("  (dossier absent)")
+
+          print()
+          print("--- Contenu reel de assets/ (repr, sans ambiguite) ---")
+          base2 = chemin("assets")
+          if os.path.isdir(base2):
+              for nom in sorted(os.listdir(base2)):
+                  print(" ", repr(nom))
+          else:
+              print("  (dossier absent)")
 
       - name: Compiler avec PyInstaller
         run: pyinstaller "Albat Fusion.spec"
 
       - name: Compresser le résultat en un seul .zip
-        # Un .zip compressé (bien plus efficace que la compression
-        # par défaut d'upload-artifact sur des milliers de petits
-        # fichiers Qt) pour rester sous le quota de stockage gratuit
-        # GitHub, souvent trop juste pour une appli PySide6.
         run: |
           Compress-Archive -Path "dist/Albat Fusion/*" -DestinationPath "Albat-Fusion-Windows.zip"
         shell: pwsh
@@ -95,7 +118,4 @@ jobs:
           name: Albat-Fusion-Windows
           path: Albat-Fusion-Windows.zip
           if-no-files-found: error
-          # Conservation courte (5 jours au lieu de 90 par défaut) :
-          # le quota gratuit se libère automatiquement bien plus
-          # vite entre deux tentatives de compilation.
           retention-days: 5
