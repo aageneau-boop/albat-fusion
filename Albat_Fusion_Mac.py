@@ -32,9 +32,35 @@ def ensure_project_subfolders(project_dir):
         os.makedirs(os.path.join(project_dir, sub), exist_ok=True)
 def resource_path(*parts):
     if getattr(sys, "frozen", False):
-        base = getattr(sys, "_MEIPASS", os.path.dirname(sys.executable))
-    else:
-        base = os.path.dirname(os.path.abspath(__file__))
+        # Toujours le dossier réel où se trouve l'exécutable, JAMAIS
+        # sys._MEIPASS : avec un packaging --onefile, _MEIPASS
+        # pointe vers un dossier temporaire recréé à chaque
+        # lancement (et supprimé à la fermeture), ce qui casserait
+        # les dossiers personnalisables (dossiers pour rapport/,
+        # profils/) que l'utilisateur doit pouvoir éditer et
+        # retrouver d'une session à l'autre. Nécessite un build
+        # PyInstaller en mode --onedir (voir notes de packaging).
+        base = os.path.dirname(sys.executable)
+
+        candidate = os.path.join(base, *parts)
+
+        # Depuis PyInstaller 6.0, le contenu embarqué (assets/,
+        # profils/, "dossiers pour rapport/"...) est placé par
+        # défaut dans un sous-dossier "_internal/" plutôt qu'à
+        # plat à côté de l'exécutable — les versions antérieures le
+        # mettaient directement à côté. Plutôt que de dépendre d'un
+        # réglage spécifique à une version de PyInstaller (fragile),
+        # on vérifie les deux emplacements possibles. Identique à
+        # resource_path() dans modules/utils.py — les deux DOIVENT
+        # rester alignés.
+        if not os.path.exists(candidate):
+            internal_candidate = os.path.join(base, "_internal", *parts)
+            if os.path.exists(internal_candidate):
+                return internal_candidate
+
+        return candidate
+
+    base = os.path.dirname(os.path.abspath(__file__))
 
     return os.path.join(base, *parts)
 
