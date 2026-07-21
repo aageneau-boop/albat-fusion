@@ -64,7 +64,41 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=[
+        # L'application n'utilise que QtWidgets/QtCore/QtGui — ces
+        # composants Qt sont énormes (WebEngine à lui seul peut
+        # peser 150-200 Mo) et jamais utilisés ici. Les exclure
+        # réduit fortement la taille du build final, utile pour
+        # rester sous le quota de stockage gratuit de GitHub
+        # Actions (voir aussi retention-days dans le workflow).
+        'PySide6.QtWebEngine',
+        'PySide6.QtWebEngineCore',
+        'PySide6.QtWebEngineWidgets',
+        'PySide6.QtQml',
+        'PySide6.QtQuick',
+        'PySide6.QtQuick3D',
+        'PySide6.QtMultimedia',
+        'PySide6.QtMultimediaWidgets',
+        'PySide6.QtNetwork',
+        'PySide6.QtPdf',
+        'PySide6.QtPdfWidgets',
+        'PySide6.QtBluetooth',
+        'PySide6.QtNfc',
+        'PySide6.QtSensors',
+        'PySide6.QtSerialPort',
+        'PySide6.QtPositioning',
+        'PySide6.QtLocation',
+        'PySide6.Qt3DCore',
+        'PySide6.Qt3DRender',
+        'PySide6.QtCharts',
+        'PySide6.QtDataVisualization',
+        'PySide6.QtRemoteObjects',
+        'PySide6.QtSql',
+        'PySide6.QtTest',
+        'PySide6.QtDesigner',
+        'PySide6.QtHelp',
+        'tkinter',
+    ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
