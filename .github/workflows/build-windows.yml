@@ -33,14 +33,49 @@ jobs:
         # PyInstaller échoue si un dossier listé dans "datas" (voir
         # le .spec) n'existe pas. On les crée s'ils manquent, pour
         # que le build ne casse jamais pour cette seule raison.
+        #
+        # "shell: python" fait exécuter ce bloc directement par
+        # l'interpréteur Python (GitHub Actions le prend en charge
+        # nativement), plutôt que de l'imbriquer dans une chaîne
+        # PowerShell : évite tout risque de mauvaise interprétation
+        # des caractères accentués selon l'encodage de la console
+        # Windows (souvent pas UTF-8 par défaut), qui pouvait créer
+        # des dossiers en double au nom légèrement corrompu
+        # ("matériel utilisé" vs une variante mal encodée),
+        # invisibles pour le code Python qui cherche le nom exact.
+        shell: python
         run: |
-          New-Item -ItemType Directory -Force -Path "profils" | Out-Null
-          New-Item -ItemType Directory -Force -Path "dossiers pour rapport\bibliographie" | Out-Null
-          New-Item -ItemType Directory -Force -Path "dossiers pour rapport\materiel utilisé" | Out-Null
-          New-Item -ItemType Directory -Force -Path "dossiers pour rapport\Statuts des espèces" | Out-Null
-          New-Item -ItemType Directory -Force -Path "dossiers pour rapport\Analyse des enregistrements" | Out-Null
-          New-Item -ItemType Directory -Force -Path "dossiers pour rapport\images" | Out-Null
-        shell: pwsh
+          import os
+          for d in [
+              "profils",
+              os.path.join("dossiers pour rapport", "bibliographie"),
+              os.path.join("dossiers pour rapport", "materiel utilisé"),
+              os.path.join("dossiers pour rapport", "Statuts des espèces"),
+              os.path.join("dossiers pour rapport", "Analyse des enregistrements"),
+              os.path.join("dossiers pour rapport", "images"),
+          ]:
+              os.makedirs(d, exist_ok=True)
+
+      - name: Diagnostic — lister les fichiers réellement présents
+        # Étape purement informative (n'échoue jamais le build) :
+        # affiche dans les logs l'arborescence exacte d'assets/ et
+        # "dossiers pour rapport/" telle que GitHub l'a reçue, pour
+        # repérer immédiatement un dossier manquant, vide, ou un nom
+        # de fichier corrompu (accents mal encodés, etc.).
+        shell: python
+        run: |
+          import os
+          for base in ["assets", "dossiers pour rapport", "profils"]:
+              print(f"--- {base} ---")
+              if not os.path.isdir(base):
+                  print("  (DOSSIER ABSENT)")
+                  continue
+              for root, dirs, files in os.walk(base):
+                  niveau = root.replace(base, "").count(os.sep)
+                  indent = "  " * niveau
+                  print(f"{indent}{os.path.basename(root) or base}/")
+                  for f in files:
+                      print(f"{indent}  {f}")
 
       - name: Compiler avec PyInstaller
         run: pyinstaller "Albat Fusion.spec"
