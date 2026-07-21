@@ -30,6 +30,9 @@ jobs:
           pip install pyinstaller
 
       - name: Vérifier la présence des dossiers requis
+        # PyInstaller échoue si un dossier listé dans "datas" (voir
+        # le .spec) n'existe pas. On les crée s'ils manquent, pour
+        # que le build ne casse jamais pour cette seule raison.
         run: |
           New-Item -ItemType Directory -Force -Path "profils" | Out-Null
           New-Item -ItemType Directory -Force -Path "dossiers pour rapport\bibliographie" | Out-Null
@@ -42,9 +45,22 @@ jobs:
       - name: Compiler avec PyInstaller
         run: pyinstaller "Albat Fusion.spec"
 
+      - name: Compresser le résultat en un seul .zip
+        # Un .zip compressé (bien plus efficace que la compression
+        # par défaut d'upload-artifact sur des milliers de petits
+        # fichiers Qt) pour rester sous le quota de stockage gratuit
+        # GitHub, souvent trop juste pour une appli PySide6.
+        run: |
+          Compress-Archive -Path "dist/Albat Fusion/*" -DestinationPath "Albat-Fusion-Windows.zip"
+        shell: pwsh
+
       - name: Publier le résultat
         uses: actions/upload-artifact@v4
         with:
           name: Albat-Fusion-Windows
-          path: dist/Albat Fusion/
+          path: Albat-Fusion-Windows.zip
           if-no-files-found: error
+          # Conservation courte (5 jours au lieu de 90 par défaut) :
+          # le quota gratuit se libère automatiquement bien plus
+          # vite entre deux tentatives de compilation.
+          retention-days: 5
