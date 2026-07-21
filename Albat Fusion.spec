@@ -135,12 +135,10 @@ coll = COLLECT(
     upx=True,
     upx_exclude=[],
     name='Albat Fusion',
-    # Depuis PyInstaller 6.0, tout le contenu embarqué est placé
-    # par défaut dans un sous-dossier "_internal/" plutôt qu'à côté
-    # de l'exécutable. contents_directory='.' restaure l'ancien
-    # comportement (tout à plat, directement à côté du .exe) —
-    # indispensable ici puisque resource_path() cherche assets/,
-    # profils/ et "dossiers pour rapport/" juste à côté de
-    # l'exécutable, pas dans un sous-dossier.
-    contents_directory='.',
+    # PyInstaller est figé à la version 5.13.2 (voir workflow
+    # GitHub Actions) précisément pour éviter le sous-dossier
+    # "_internal/" introduit par défaut depuis la version 6.0 — ici
+    # tout le contenu embarqué reste directement à côté du .exe,
+    # ce dont resource_path() a besoin pour trouver assets/,
+    # profils/ et "dossiers pour rapport/".
 )
